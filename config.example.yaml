@@ -46,3 +46,12 @@ notify:
   pushplus_token: ""    # PushPlus token
   bark_url: ""          # Bark 推送完整 URL
   wecom_webhook: ""     # 企业微信群机器人 webhook
+
+# 从安卓设备/模拟器自动抓 token（可选）
+# 学校对校外 IP 的密码登录加了短信二次验证，无人值守自动登录走不通；
+# 用模拟器里已登录的 App 抓 token 是目前最稳的办法：
+#   python tools/token_tool.py grab
+device:
+  adb_path: "D:\\leidian\\LDPlayer9\\adb.exe"   # 你的 adb 路径（雷电/MuMu 自带的就行）
+  package: "cn.edu.fzu.fdxypa"                  # 智汇福大包名，一般不用改
+  auto_refresh: false   # true = token 失效时自动从设备抓一次再重试

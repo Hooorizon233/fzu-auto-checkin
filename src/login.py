@@ -11,6 +11,11 @@
    从重定向链 URL 中提取 token
 
 若服务器要求验证码，登录会失败并在页面返回错误信息，此处直接抛出。
+
+⚠️ 2026-11 实测：账号密码仍有效，但学校对「非校内 IP」强制短信二次验证
+（页面会返回 `sso-second=true` + `second-auth-tip`「您正在使用非校内ip登录，请进行手机验证」）。
+这种情况无法在无人值守的脚本里完成，会抛 LoginNeedsSms，
+请改用 `python tools/token_tool.py grab` 从已登录的 App / 模拟器里抓 token。
 """
 import base64
 import re
@@ -28,6 +33,15 @@ UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
+
+
+class LoginNeedsSms(RuntimeError):
+    """学校要求短信二次验证（校外 IP），脚本无法自动完成。"""
+
+
+def _page_field(html: str, elem_id: str) -> str:
+    m = re.search(rf'id="{elem_id}"[^>]*>(.*?)</p>', html, re.S)
+    return m.group(1).strip() if m else ""
 
 
 def _parse_field(html: str, elem_id: str) -> str:
@@ -78,7 +92,18 @@ def login(username: str, password: str) -> str:
         allow_redirects=True,
     )
 
-    # 3. 从重定向链和最终 URL 提取 token
+    # 3. 学校风控：校外 IP 会进入短信二次验证，页面不再下发 token
+    if _page_field(r2.text, "sso-second").lower() == "true":
+        tip = _page_field(r2.text, "second-auth-tip") or "需要短信二次验证"
+        phone = _page_field(r2.text, "phone-number")
+        masked = f"{phone[:3]}****{phone[-4:]}" if len(phone) >= 8 else phone
+        raise LoginNeedsSms(
+            f"{tip}（接收手机号 {masked}）。无人值守脚本无法完成短信验证，"
+            "请改用 python tools/token_tool.py grab 从已登录的 App/模拟器抓 token，"
+            "或改用校园网 IP 运行。"
+        )
+
+    # 4. 从重定向链和最终 URL 提取 token
     for url in [h.url for h in r2.history] + [r2.url]:
         token = _extract_token(url)
         if token:

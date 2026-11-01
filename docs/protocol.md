@@ -88,7 +88,30 @@ token 由 App 登录后下发，获取方式按成本排序：
 3. iOS 用户：无越狱抓不到 App 内 token（SSL Pinning）。建议等 CAS 方案，
    或借用任意一台 Android 设备执行方式 1 一次。
 
-## 5. 免责声明
+## 5. 2026-11 改版记录（原作者停更后的实测）
+
+H5 从旧版前端换成了 Vite + React 的 SPA（`assets/index-*.js`），但**协议本身没变**：
+仍是 4 个接口 + 同一把 AES key + `token` 请求头 + `param` 双重 URL 编码。
+
+变的是 `init.action` 的响应字段含义：
+
+| 用途 | 旧字段 | 新字段 |
+|------|--------|--------|
+| 是否已签 | `userData.FState` | `statusData.status` ∈ `SUCCESS` / `PROCESSING` / `FAILED` |
+| 有无计划 | `schoolData` 是否为空 | `userData.FPlanID` 是否为空 |
+| 迟到线 | `paramsData.FLateTime` | 同左（2026-11-01 实测 22:30） |
+| 校区列表 | `schoolData[].FName` | 另有 `schoolData[].ID`，打卡时 `campus` 取 `check` 命中项的 `id` |
+
+其余字段（`paramsData.FStartTime/FEndTime/FToday`、`userData.FWay/FCollUnit/FDefaultCampus/FReason`、
+`schoolData[].FPosition` 内含 `range` 多边形）保持不变。
+
+**登录链路的变化（重要）**：`sso.fzu.edu.cn` 对**非校内 IP** 强制短信二次验证。
+密码校验通过后，服务端返回的页面里带 `sso-second=true`、
+`second-auth-tip=您正在使用非校内ip登录，请进行手机验证...`、`phone-number`，不再下发 ticket。
+因此纯密码的无人值守登录在校园网外不可用，只能靠 App 免登 token
+（用 `tools/token_tool.py` 从设备上抓）。
+
+## 6. 免责声明
 
 - 本协议笔记仅供学习交流，禁止用于代挂、有偿服务或伪造到岗记录。
 - 定位参数应使用使用者的**真实位置**；脚本不内置、不伪造任何坐标。

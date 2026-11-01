@@ -11,3 +11,10 @@ venv/
 # ---- 运行时 ----
 *.log
 .DS_Store
+
+# ---- 临时调试产物 ----
+_diag*.py
+_bundle_*.js
+_sso*.html
+_loginNew.js
+screen*.png
